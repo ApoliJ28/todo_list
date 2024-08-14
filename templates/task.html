@@ -1,0 +1,149 @@
+{% extends './base.html' %}
+
+{% block body_content %}
+<div class="container my-5">
+    <h2 class="text-center mb-4">{{ list_name }}</h2>
+    
+    <!-- Formulario para crear nuevas tareas -->
+    <form id="add-task-form" class="mb-4" method="post" action="{{ url_for('add_task') }}">
+        <div class="input-group">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" id="list_id" name="list_id" class="form-control" value="{{list_id}}" required>
+            <input type="text" id="task_name" name="task_name" class="form-control" placeholder="Agregar nueva tarea..." aria-label="Nueva tarea" required>
+            <button class="btn btn-primary" type="submit">Añadir</button>
+        </div>
+    </form>
+
+    <!-- Lista de tareas -->
+    <ul class="list-group">
+        {% for task in tasks %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <input type="checkbox" {% if task.completed %}checked{% endif %} class="form-check-input me-2" onchange="markAsComplete(this, {{ task.id }})">
+                <span class="{% if task.completed %}text-decoration-line-through{% endif %}" id="task-{{ task.id }}" style="color: {{ task.priority_color }};">
+                    {{ task.name }}
+                </span>
+            </div>
+            <div class="d-flex align-items-center">
+                <div class="btn-group me-2">
+                    <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style="background-color: {{ task.priority_color }};">
+                        <i class="bi bi-palette-fill"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#" onclick="setPriority({{ task.id }}, '#808080')">
+                            <span class="color-box" style="background-color: #808080;"></span> Sin Prioridad
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="setPriority({{ task.id }}, '#ff0000')">
+                            <span class="color-box" style="background-color: #ff0000;"></span> Alta
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="setPriority({{ task.id }}, '#ff7f00')">
+                            <span class="color-box" style="background-color: #ff7f00;"></span> Media-Alta
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="setPriority({{ task.id }}, '#ffff00')">
+                            <span class="color-box" style="background-color: #ffff00;"></span> Media
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="setPriority({{ task.id }}, '#7fff00')">
+                            <span class="color-box" style="background-color: #7fff00;"></span> Baja-Media
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="setPriority({{ task.id }}, '#00ff00')">
+                            <span class="color-box" style="background-color: #00ff00;"></span> Baja
+                        </a></li>
+                    </ul>
+                </div>
+                <div>
+                    <a href="{{ url_for('delete_task', task_id=task.id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro de que deseas eliminar esta tarea?');">
+                        Eliminar
+                    </a>
+                </div>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<style>
+    .color-box {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 3px;
+        margin-right: 10px;
+    }
+
+    /* Estilo del botón eliminar para que coincida con el diseño general */
+    .btn-danger {
+        color: white;
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
+    }
+
+    /* Ajustes adicionales para la disposición de los elementos */
+    .list-group-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>
+
+<script>
+    function setPriority(taskId, color) {
+        // Actualiza el color de la tarea inmediatamente
+        const taskElement = document.getElementById(`task-${taskId}`);
+        taskElement.style.color = color;
+    
+        // Actualiza el botón de prioridad para reflejar el nuevo color
+        const priorityButton = taskElement.parentElement.nextElementSibling.querySelector('.btn');
+        priorityButton.style.backgroundColor = color;
+    
+        // Realiza una llamada AJAX para guardar el color en la base de datos
+        fetch(`/update_task_priority/${taskId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ priority_color: color })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                alert('Error al actualizar la prioridad');
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+    
+    function markAsComplete(checkbox, taskId) {
+        const isChecked = checkbox.checked;
+        const taskElement = document.getElementById(`task-${taskId}`);
+    
+        if (isChecked) {
+            taskElement.classList.add('text-decoration-line-through');
+        } else {
+            taskElement.classList.remove('text-decoration-line-through');
+        }
+    
+        fetch(`/update_task_status/${taskId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ completed: isChecked })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                alert('Error al actualizar el estado de la tarea');
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+</script>
+
+{% endblock %}

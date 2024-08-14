@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block body_content %}
+<main class="container py-4 text-center">
+    <h1 class="mb-4">Welcome</h1>
+    <p class="lead mb-4">
+        Task list web system, simple and manageable, to be able to complete your
+        projects, goals, and tasks.
+    </p>
+    <p class="lead">
+        <a href="{{ url_for('todo_list') }}" class="btn btn-lg btn-light fw-bold border-white bg-white">
+            View More
+        </a>
+    </p>
+</main>
+{% endblock %}
